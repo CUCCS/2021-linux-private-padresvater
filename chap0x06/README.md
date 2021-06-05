@@ -110,7 +110,7 @@ dvwa.sec.cuc.edu.cn CNAME wp.sec.cuc.edu.cn
 
 - ``` systemctl status vsftpd``` 查看服务状态
 
-  ![vsftpd-status](.\img\vsftpd-status.png)
+  ![vsftpd-status](\img\vsftpd-status.png)
 
 - 配置文件放在 /etc/vsftpd.conf
 
