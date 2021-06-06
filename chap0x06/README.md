@@ -12,43 +12,28 @@ FTP、NFS、DHCP、DNS、Samba服务器的自动安装与自动配置
   
 - Ubuntu 20.04
   
+- 工作主机：cuc@clone-of-yzh  
+  
+- 目标主机：cuc@ub-clone-yzh
+  
+- 两台主机能够互相免密登录
+  
 - FTP  由于 vsftpd (supports both anonymous and non-anonymous FTP access)，这里选用该服务。
 
-  ```
-  apt-cache show ftpd vsftpd proftpd-basic pure-ftpd | grep -A 5 Description-en
-  
-  Description-en: File Transfer Protocol (FTP) server
-   This is the netkit ftp server. You are recommended to use one of its
-   alternatives, such as vsftpd, proftpd, or pure-ftpd.
-   .
-   This server supports IPv6, and can be used in standalone mode as well
-   as in inetd-slave mode, but other servers have better long-term
-  --
-  Description-en: lightweight, efficient FTP server written for security
-   This package provides the "Very Secure FTP Daemon", written from
-   the ground up with security in mind.
-   .
-   It supports both anonymous and non-anonymous FTP access, PAM authentication,
-   bandwidth limiting, and the Linux sendfile() facility.
-  --
-  Description-en: Versatile, virtual-hosting FTP daemon - binaries
-   ProFTPD is a powerful modular FTP/SFTP/FTPS server. This File Transfer
-   Protocol daemon supports also hidden directories, virtual hosts, and
-   per-directory ".ftpaccess" files. It uses a single main configuration
-   file, with a syntax similar to Apache.
-   .
-  --
-  Description-en: Secure and efficient FTP server
-   Free, secure, production-quality and standard-conformant FTP server.
-   Features include chrooted home directories,
-   virtual domains, built-in 'ls', anti-warez system, configurable ports for
-   passive downloads, FXP protocol, bandwidth throttling, ratios,
-   fortune files, Apache-like log files, fast standalone mode, atomic uploads,
-  ```
+  配置一个提供匿名访问的FTP服务器，匿名访问者可以访问1个目录且仅拥有该目录及其所有子目录的只读访问权限；
+
+  配置一个支持用户名和密码方式访问的账号，该账号继承匿名访问者所有权限，且拥有对另1个独立目录及其子目录完整读写（包括创建目录、修改文件、删除文件等）权限；
+
+  ​		该账号仅可用于FTP服务访问，不能用于系统shell登录；
+
+   FTP用户不能越权访问指定目录之外的任意其他目录和文件；
+
+   匿名访问权限仅限白名单IP来源用户访问，禁止白名单IP以外的访问；
 
 - NFS
-  - 对照第6章课件中的NFS服务器配置任务
+
   
+
 - DHCP
   - 2台虚拟机使用Internal网络模式连接，其中一台虚拟机上配置DHCP服务，另一台服务器作为DHCP客户端，从该DHCP服务器获取网络地址配置
   
@@ -61,7 +46,7 @@ FTP、NFS、DHCP、DNS、Samba服务器的自动安装与自动配置
   - 基于上述Internal网络模式连接的虚拟机实验环境，在DHCP服务器上配置DNS服务，使得另一台作为DNS客户端的主机可以通过该DNS服务器进行DNS查询
   - 在DNS服务器上添加 `zone "cuc.edu.cn"` 的以下解析记录
 
-```
+```shell
 ns.cuc.edu.cn NS
 ns A <自行填写DNS服务器的IP地址>
 wp.sec.cuc.edu.cn A <自行填写第5章实验中配置的WEB服务器的IP地址>
@@ -100,7 +85,7 @@ dvwa.sec.cuc.edu.cn CNAME wp.sec.cuc.edu.cn
 - 脚本应在纯净未配置任何目标服务的系统和已完全配置好所有目标服务的系统2种典型测试用例条件下均能测试通过
   - 对于在目标系统上已完成配置的服务，允许用本地的配置文件去覆盖远程已有的配置文件，但在执行***覆盖***操作之前应对远程已有的配置文件进行***妥善***备份
 
-# 手动配置
+# 配置和检验过程
 
 ## vsftpd
 
@@ -110,7 +95,7 @@ dvwa.sec.cuc.edu.cn CNAME wp.sec.cuc.edu.cn
 
 - ``` systemctl status vsftpd``` 查看服务状态
 
-  ![vsftpd-status](\img\vsftpd-status.png)
+  ![vsftpd-status](.\img\vsftpd-status.png)
 
 - 配置文件放在 /etc/vsftpd.conf
 
@@ -118,18 +103,64 @@ dvwa.sec.cuc.edu.cn CNAME wp.sec.cuc.edu.cn
 
   ```sudo cp /etc/vsftpd.conf /etc/vsftpd.conf_default```
 
+- 匿名用户登录
+
+  ```anonymous_enable = YES```
+
+  (Controls whether anonymous logins are permitted or not. If enabled, both the usernames **ftp** and **anonymous** are recognised as anonymous logins.) 即使用用户名ftp即可表示匿名登陆。
+
+- 本地用户登录
+
+  ```local_enable=YES```
+
+- 读写操作
+
+  ```write_enable=YES```
+
+- FTP用户不能越权访问指定目录之外的任意其他目录和文件
+
+  ```chroot_list_enable=NO```
+
+- 设置白名单
+
+  ```shell
+  userlist_enable=YES
+  userlist_file=/etc/vsftpd.user_list
+  userlist_deny=NO
+  ```
+
+  /etc/vsftpd.user_list即白名单。
+
+- 得到最终的配置文件 
+
+  [vsftpd.conf](.\config\vsftpd.conf)
+
+- 脚本文件
+
+  [vsftpd.sh](.\shell\vsftpd.sh)
+
+- 在目标主机上运行shell脚本进行测试
+
+  ![ftp-demo](.\img\ftp-demo.png)
+
+- 工作主机连接目标主机
+
+  ![ftp-connect](.\img\ftp-connect.png)
+
 - 
 
-  
 
-  
 
-  
 
-  
+
+
+
+
 
 # 参考资料
 
 - [vsftpd官方配置文档](http://vsftpd.beasts.org/vsftpd_conf.html)
+- [使用vsftpd 搭建ftp 服务器](https://segmentfault.com/a/1190000016376962)
+- [vsftpd 配置:chroot_local_user与chroot_list_enable详解](vsftpd 配置:chroot_local_user与chroot_list_enable详解)
 - 
 
